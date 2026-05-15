@@ -148,24 +148,41 @@ async function* parseSSE(resp) {
   const reader = resp.body.getReader();
   const decoder = new TextDecoder('utf-8');
   let buf = '';
+
+  const parseBlock = (block) => {
+    let event = 'message';
+    const dataLines = [];
+    for (const line of block.split('\n')) {
+      if (line.startsWith('event:')) event = line.slice(6).trim();
+      else if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart());
+    }
+    if (!dataLines.length) return null;
+    let data = null;
+    try { data = JSON.parse(dataLines.join('\n')); } catch (e) {
+      console.warn('[sse] JSON parse failed', e, dataLines.join('\n'));
+    }
+    return { event, data };
+  };
+
   while (true) {
     const { value, done } = await reader.read();
-    if (done) break;
+    if (done) {
+      // flush any trailing event the server didn't terminate with \n\n
+      buf += decoder.decode();
+      const tail = buf.trim();
+      if (tail) {
+        const ev = parseBlock(tail);
+        if (ev) yield ev;
+      }
+      break;
+    }
     buf += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
     let i;
     while ((i = buf.indexOf('\n\n')) !== -1) {
       const block = buf.slice(0, i);
       buf = buf.slice(i + 2);
-      let event = 'message';
-      const dataLines = [];
-      for (const line of block.split('\n')) {
-        if (line.startsWith('event:')) event = line.slice(6).trim();
-        else if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart());
-      }
-      if (!dataLines.length) continue;
-      let data = null;
-      try { data = JSON.parse(dataLines.join('\n')); } catch (_) { /* keep null */ }
-      yield { event, data };
+      const ev = parseBlock(block);
+      if (ev) yield ev;
     }
   }
 }
@@ -226,7 +243,13 @@ async function ask(question) {
           if (prev) prev.className = 'step done';
         }
         const d = ev.data || {};
-        renderAnswer(answerEl, d.answer || '(空回答)');
+        console.log('[answer event]', d);
+        const txt = (d.answer || '').trim();
+        if (txt) {
+          renderAnswer(answerEl, txt);
+        } else {
+          answerEl.innerHTML = '<em style="color:var(--muted)">（后端返回了空答案，请查看 DevTools Console 与服务端日志）</em>';
+        }
         renderMeta(metaEl, d, timings, d.total_ms);
         scrollToBottom();
       } else if (ev.event === 'error') {
@@ -250,12 +273,25 @@ async function ask(question) {
 
 // ---------- rendering ----------
 function renderAnswer(el, md) {
-  // marked.js is loaded from CDN; fall back to plain text if it failed to load.
-  if (window.marked) {
-    el.innerHTML = window.marked.parse(md);
-  } else {
-    el.textContent = md;
+  // marked.js CDN bundle has changed shape across versions; try every known
+  // entry point, fall back to a minimal markdown→html if nothing loaded.
+  try {
+    const m = window.marked;
+    let html = null;
+    if (m && typeof m.parse === 'function') html = m.parse(md);
+    else if (typeof m === 'function') html = m(md);
+    if (html != null) {
+      el.innerHTML = html;
+      return;
+    }
+  } catch (e) {
+    console.warn('[renderAnswer] marked failed, falling back to plain', e);
   }
+  // Plain fallback — escape, then preserve paragraphs + line breaks.
+  el.innerHTML = md
+    .split(/\n{2,}/)
+    .map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
+    .join('');
 }
 
 function renderError(el, msg) {
