@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nova Retrieve · Agentic RAG</title>
+  <link rel="stylesheet" href="/ui/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      <strong>Nova Retrieve</strong>
+      <span class="muted">· Agentic RAG (LangGraph + Qdrant + BGE-M3)</span>
+    </div>
+    <div class="status">
+      <span id="healthDot" class="health-dot offline" title="后端状态"></span>
+      <span id="healthText" class="muted">检查中…</span>
+    </div>
+  </header>
+
+  <main id="chat" class="chat">
+    <div class="empty" id="emptyState">
+      <h1>问点什么？</h1>
+      <p class="muted">本地知识库优先，必要时自动走 Web 检索；带相关性评分与幻觉检测。</p>
+      <div class="examples">
+        <button class="chip" data-q="SmartDoc 平台目前向量库的容量规划是什么？">SmartDoc 向量库容量规划</button>
+        <button class="chip" data-q="员工调休假怎么申请？">调休申请流程</button>
+        <button class="chip" data-q="DeepSeek-V4 发布了吗？">DeepSeek-V4 发布了吗？</button>
+      </div>
+    </div>
+  </main>
+
+  <form id="composer" class="composer" autocomplete="off">
+    <textarea id="input" rows="1" placeholder="输入你的问题（Enter 发送 · Shift+Enter 换行）"
+              maxlength="2000"></textarea>
+    <button id="sendBtn" type="submit">发送</button>
+    <button id="stopBtn" type="button" hidden>停止</button>
+  </form>
+
+  <script src="/ui/app.js"></script>
+</body>
+</html>

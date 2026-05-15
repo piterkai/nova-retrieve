@@ -1,0 +1,40 @@
+# ---- secrets ----
+.env
+.env.*
+!.env.example
+
+# ---- python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# ---- venv ----
+.venv/
+venv/
+env/
+
+# ---- project data / artifacts ----
+data/cache/
+data/docs/sec/
+qdrant_storage/
+*.log
+logs/
+
+# ---- IDE / OS ----
+.claude/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---- node (if frontend ever adds a build step) ----
+node_modules/
